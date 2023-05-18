@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html onclick="document.documentElement.requestFullscreen()">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+  @font-face {
+    font-family: dos;
+    src: url("/Perfect DOS VGA 437 Win.ttf");
+  
+  }
+    body {
+      background-color: black;
+      color: lime;
+      font-family: "Courier New", monospace;
+      margin: 0;
+      padding: 0;
+    }
+    .terminal {
+      width: 100%;
+      height: 100vh;
+      background-color: black;
+      padding: 20px;
+      overflow: scroll ;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-size :20px;
+      font-family: dos;
+    }
+    .output {
+      color: white ;
+    }
+    .input {
+      color: white ;
+      display: flex;
+      align-items: center;
+    }
+    .input span {
+      color: #00ff00;
+      margin-right: 5px;
+    }
+    .input input {
+      width: 100%;
+      border: none;
+      background-color: black;
+      color: white ;
+      outline: none;
+    }
+    .scro{
+      width: 100%;
+      height :70vh;
+      background: #0015FF00;
+    }
+  </style>
+</head>
+<body>
+  <div class="terminal">
+    <div class="output"><pre style="white-space: pre-wrap;">
+      
+<span style="color: white ;">Hello! Welcome In Terminal!</span><br>
+<br>
+<span style="color: lime ;">Type "help" to see the list of available commands.</span><br>
+Or "clear" to clear the screen
+<br>
+<span style="color: purple;">Enjoy your time in the terminal!</span>
+
+
+    </pre></div>
+    <div class="input">
+      <span>&gt;</span>
+      <input type="text" id="commandInput" />
+    </div>
+    <div class="scro">
+      
+    </div>
+  </div>
+
+  <script>const terminalOutput = document.querySelector(".output");
+const terminalInput = document.querySelector("#commandInput");
+
+const vars = localStorage.getItem("terminalVars")
+  ? JSON.parse(localStorage.getItem("terminalVars"))
+  : {};
+let noOutput = false;
+
+function executeCommand(command) {
+  
+  // Walidacja kodu HTML
+  
+  const htmlRegex = /<([^ >]+)[^>]*>.*<\/\1>|<[^>]+\/?>/;
+  if (htmlRegex.test(command)) {
+    MustwriteToTerminal(`<stroke style='color:red'> Unknown command  </stroke>&nbsp;&nbsp;�`);
+    setTimeout(function(){
+    noOutput = true;
+    },50)
+    setTimeout(function () {
+      noOutput = false;
+    }, 200);
+    return;
+  }
+
+    
+    
+  const regexPrint = /^Print\s*\("([^"]+)"\)$/;
+  const regexInt = /^Int\s+(\w+)\s*=\s*([-+]?\w+)$/;
+  const regexPrintf = /^Printf\s*\(([^)]+)\)$/;
+
+  if (regexPrint.test(command)) {
+    const match = command.match(regexPrint);
+    const text = match[1];
+    writeToTerminal(text);
+  } else if (regexInt.test(command)) {
+    const match = command.match(regexInt);
+    const varName = match[1].trim();
+    const varValue = match[2].trim();
+    vars[varName] = varValue;
+    writeToTerminal(`Variable '${varName}' set to '${varValue}'`);
+  } else if (regexPrintf.test(command)) {
+    const match = command.match(regexPrintf);
+    const expression = match[1].trim();
+    const result = evaluateExpression(expression);
+    if (result !== null) {
+      writeToTerminal(`${expression} = ${result}`);
+    } else {
+      writeToTerminal(`Error evaluating expression: ${expression}`);
+    }
+  } else if (command === "clear") {
+    terminalOutput.innerHTML = "";
+  } else if (command === "clear -a") {
+    terminalOutput.innerHTML = "";
+    vars = {};
+  } else if (command === "Help" || command === "help") {
+    writeToTerminal(
+      `<span style='color:lime;'>List of commands</span> <br><br>
+        "<stroke style='color:lime'>+</stroke>"    <span style='color:purple;'>Help</span> - Display available commands <br>
+        "<stroke style='color:lime'>+</stroke>"    <span style='color:purple;'>Print ("text")</span> - Print the specified text <br>
+        "<stroke style='color:lime'>+</stroke>"    <span style='color:purple;'>Int variablename=123</span> - Declare an integer variable with the value 123 <br>
+        "<stroke style='color:lime'>+</stroke>"    <span style='color:purple;'>Printf (variablename) or Printf (variablename * variablename)</span> - Print the value of a variable or perform a calculation
+        
+        <br>
+        "<stroke style='color:lime'>+</stroke>" <span style='color:purple;'>clear -a </span> delete all Storage variables 
+        `
+    );
+  } else {
+    writeToTerminal(`<stroke style='color:red'> Unknown command  </stroke>&nbsp;&nbsp;${command}`);
+  }
+
+  localStorage.setItem("terminalVars", JSON.stringify(vars));
+}
+
+function evaluateExpression(expression) {
+  const operators = ["+", "-", "*", "/"];
+  let result = null;
+
+  operators.forEach((operator) => {
+    const parts = expression.split(operator);
+    if (parts.length === 2) {
+      const operand1 = parseInt(vars[parts[0].trim()]);
+      const operand2 = parseInt(vars[parts[1].trim()]);
+
+      switch (operator) {
+        case "+":
+          result = operand1 + operand2;
+          break;
+        case "-":
+          result = operand1 - operand2;
+          break;
+        case "*":
+          result = operand1 * operand2;
+          break;
+        case "/":
+          result = operand1 / operand2;
+          break;
+      }
+    }
+  });
+
+  return result;
+}
+
+function writeToTerminal(output) {
+  setTimeout(function () {
+    if (noOutput === false) {
+      terminalOutput.innerHTML += `<br><stroke style="color:lime ">&gt;</stroke>&nbsp;${output}`;
+    }
+    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+  }, 200);
+}
+function MustwriteToTerminal(output) {
+  setTimeout(function() {
+    
+      terminalOutput.innerHTML += `<br><stroke style="color:lime ">&gt;</stroke>&nbsp;${output}`;
+    
+    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+  }, 200);
+}
+terminalInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    const command = terminalInput.value;
+    writeToTerminal(` ${command}`);
+    executeCommand(command);
+    terminalInput.value = "";
+  }
+});
+
+// Wczytaj zmienne z localStorage przy uruchomieniu strony
+for (const [varName, varValue] of Object.entries(vars)) {
+  writeToTerminal(`Variable '${varName}' loaded: '${varValue}'`);
+}
+
+
+  </script>
+</body>
+</html>
